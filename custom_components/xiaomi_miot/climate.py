@@ -523,6 +523,12 @@ class MiotClimateEntity(MiotToggleEntity, BaseClimateEntity):
         ret = False
         if ATTR_HVAC_MODE in kwargs:
             ret = self.set_hvac_mode(kwargs[ATTR_HVAC_MODE])
+            if kwargs[ATTR_HVAC_MODE] == HVACMode.OFF: # no feather action when hvac_mode==off, workaround for HomeKit(Automation) send command 'set_temperature to TargetHeatingCoolingState to 0, TargetTemperature to 25°C'
+                self.logger.warning('%s is now turn off, stop runing subsequent actions.', self.name_model)
+                return ret
+        if not self.is_on: # workaround for HomeKit(Automation) set temperature when its off
+            self.logger.warning('%s is off, not going to set temperature.', self.name_model)
+            return True
         if ATTR_TEMPERATURE in kwargs:
             val = kwargs[ATTR_TEMPERATURE]
             if val < self.min_temp:
