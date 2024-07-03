@@ -118,6 +118,7 @@ class MiotSpecInstance:
         dls = [
             des.lower(),
             des,
+            des.replace('-', ' ').lower(),
             des.replace('-', ' '),
         ]
         tls = self.translations
@@ -1015,6 +1016,9 @@ class MiotResults:
                 adt[ek] = prop.spec_error
         return adt
 
+    def to_json(self):
+        return [r.to_json() for r in self.results]
+
     def __str__(self):
         return f'{self._results}'
 
@@ -1040,6 +1044,9 @@ class MiotResult:
     @property
     def spec_error(self):
         return MiotSpec.spec_error(self.code)
+
+    def to_json(self):
+        return self.result
 
     def __str__(self):
         return f'{self.result}'
