@@ -316,7 +316,7 @@ class MiotClimateEntity(MiotToggleEntity, BaseClimateEntity):
                 if not p:
                     continue
                 return self.set_property(p, True)
-            for mode in (HVACMode.HEAT_COOL, HVACMode.AUTO, HVACMode.HEAT, HVACMode.COOL):
+            for mode in (HVACMode.HEAT, HVACMode.COOL, HVACMode.AUTO, HVACMode.HEAT_COOL): # change priority for modes selection when turn on.
                 if mode not in self.hvac_modes:
                     continue
                 return self.set_hvac_mode(mode)
