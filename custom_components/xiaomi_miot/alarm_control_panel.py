@@ -1,13 +1,6 @@
 """Support alarm_control_panel entity for Xiaomi Miot."""
 import logging
 
-from homeassistant.const import (
-    STATE_ALARM_ARMED_AWAY,
-    STATE_ALARM_ARMED_HOME,
-    STATE_ALARM_ARMED_NIGHT,
-    STATE_ALARM_DISARMED,
-    STATE_ALARM_TRIGGERED,
-)
 from homeassistant.components.alarm_control_panel import (
     DOMAIN as ENTITY_DOMAIN,
     AlarmControlPanelEntity,
@@ -18,6 +11,7 @@ from . import (
     DOMAIN,
     CONF_MODEL,
     XIAOMI_CONFIG_SCHEMA as PLATFORM_SCHEMA,  # noqa: F401
+    HassEntry,
     MiotEntity,
     async_setup_config_entry,
     bind_services_to_entries,
@@ -34,6 +28,7 @@ SERVICE_TO_METHOD = {}
 
 
 async def async_setup_entry(hass, config_entry, async_add_entities):
+    HassEntry.init(hass, config_entry).new_adder(ENTITY_DOMAIN, async_add_entities)
     await async_setup_config_entry(hass, config_entry, async_setup_platform, async_add_entities, ENTITY_DOMAIN)
 
 
@@ -59,7 +54,7 @@ class MiotAlarmEntity(MiotEntity, AlarmControlPanelEntity):
     def __init__(self, config, miot_service: MiotService):
         super().__init__(miot_service, config=config, logger=_LOGGER)
         self._attr_code_arm_required = False
-        self._is_mgl03 = self._model == 'lumi.gateway.mgl03'
+        self._is_mgl03 = self.model == 'lumi.gateway.mgl03'
         self._prop_mode = miot_service.get_property('arming_mode')
         if self._prop_mode:
             if self._prop_mode.list_value('home_arming') is not None:
@@ -89,17 +84,17 @@ class MiotAlarmEntity(MiotEntity, AlarmControlPanelEntity):
             if des is not None:
                 des = f'{des}'.lower()
                 if 'basic' in des:
-                    self._attr_state = STATE_ALARM_DISARMED
+                    self._attr_state = AlarmControlPanelState.DISARMED
                 elif 'home' in des:
-                    self._attr_state = STATE_ALARM_ARMED_HOME
+                    self._attr_state = AlarmControlPanelState.ARMED_HOME
                 elif 'away' in des:
-                    self._attr_state = STATE_ALARM_ARMED_AWAY
+                    self._attr_state = AlarmControlPanelState.ARMED_AWAY
                 elif 'sleep' in des:
-                    self._attr_state = STATE_ALARM_ARMED_NIGHT
+                    self._attr_state = AlarmControlPanelState.ARMED_NIGHT
         if self._is_mgl03:
             val = self._state_attrs.get('arming.alarm')
             if val:
-                self._attr_state = STATE_ALARM_TRIGGERED
+                self._attr_state = AlarmControlPanelState.TRIGGERED
         return self._attr_state
 
     def set_arm_mode(self, mode):

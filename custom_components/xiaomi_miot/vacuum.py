@@ -22,6 +22,7 @@ from . import (
     DOMAIN,
     CONF_MODEL,
     XIAOMI_CONFIG_SCHEMA as PLATFORM_SCHEMA,  # noqa: F401
+    HassEntry,
     MiotEntity,
     DeviceException,
     MIOT_LOCAL_MODELS,
@@ -41,6 +42,7 @@ SERVICE_TO_METHOD = {}
 
 
 async def async_setup_entry(hass, config_entry, async_add_entities):
+    HassEntry.init(hass, config_entry).new_adder(ENTITY_DOMAIN, async_add_entities)
     await async_setup_config_entry(hass, config_entry, async_setup_platform, async_add_entities, ENTITY_DOMAIN)
 
 
@@ -141,14 +143,14 @@ class MiotVacuumEntity(MiotEntity, StateVacuumEntity):
             if val is None:
                 pass
             elif val in self._prop_status.list_search(
-                'Cleaning', 'Sweeping', 'Mopping', 'Sweeping and Mopping',
+                'Cleaning', 'Sweeping', 'Mopping', 'Sweeping And Mopping', 'Washing', 'Go Washing',
                 'Part Sweeping', 'Zone Sweeping', 'Select Sweeping', 'Spot Sweeping', 'Goto Target',
-                'Starting', 'Working', 'Busy',
+                'Starting', 'Working', 'Busy', 'DustCollecting'
             ):
                 return STATE_CLEANING
             elif val in self._prop_status.list_search('Idle', 'Sleep'):
                 return STATE_IDLE
-            elif val in self._prop_status.list_search('Charging', 'Charging Completed', 'Fullcharge'):
+            elif val in self._prop_status.list_search('Charging', 'Charging Completed', 'Fullcharge', 'Charge Done', 'Drying'):
                 return STATE_DOCKED
             elif val in self._prop_status.list_search('Go Charging'):
                 return STATE_RETURNING
@@ -286,12 +288,13 @@ class MiotRoborockVacuumEntity(MiotVacuumEntity):
             adt['clean_time'] = round(props['clean_time'] / 60, 1)
         if adt:
             await self.async_update_attrs(adt)
+            await self.device.dispatch(self.device.encode({'props': props}))
 
     async def get_room_mapping(self):
         if not self.miot_device:
             return None
         try:
-            rooms = self.miot_device.send('get_room_mapping')
+            rooms = await self.miot_device.async_send('get_room_mapping')
             if rooms and rooms != 'unknown_method':
                 homes = await self.xiaomi_cloud.async_get_homerooms() if self.xiaomi_cloud else []
                 cloud_rooms = {}
@@ -329,7 +332,7 @@ class MiotRoborockVacuumEntity(MiotVacuumEntity):
         return super().pause()
 
     def return_to_base(self, **kwargs):
-        if self._model in ['rockrobo.vacuum.v1']:
+        if self.model in ['rockrobo.vacuum.v1']:
             self.stop()
         return super().return_to_base()
 
